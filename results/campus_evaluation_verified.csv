@@ -1,0 +1,2 @@
+elapsed_seconds,path_length_m,minimum_obstacle_m,minimum_front_obstacle_m,scan_count,near_obstacle_scans,stop_commands,route_succeeded
+277.30,18.883,0.736,0.736,2772,2736,10,True

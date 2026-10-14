@@ -1,0 +1,15 @@
+# ROS 2 and colcon generated output
+/build/
+/install/
+/log/
+/*_old_path_cache/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local runtime and editor state
+.ros/
+.vscode/
+.codex_backups/
