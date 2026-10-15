@@ -25,9 +25,26 @@ class CampusAutonomy(Node):
         self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.done_pub = self.create_publisher(Bool, '/campus_navigation/succeeded', 10)
         self.status_pub = self.create_publisher(String, '/campus_navigation/status', 10)
+        self.obstacle_pub = self.create_publisher(Bool, '/campus_navigation/obstacle_detected', 10)
+        self.obstacle_seen = False
+        # Gazebo's scan can include the robot's own bumper/body at these ranges.
+        self.self_echo_max_range = 0.40
         self.create_subscription(LaserScan, '/scan', self.scan_cb, 10)
         self.create_subscription(Odometry, '/odom', self.odom_cb, 10)
-        self.waypoints = [(0.0, 2.0), (3.5, 2.0), (3.5, 1.5), (-3.5, 1.5), (-3.5, 2.0), (0.0, 2.0), (0.0, 0.0)]
+        # S-shaped slalom: pass below block 1, above block 2, then below block 3.
+        self.route_world = [
+            (-3.2, 1.70),  # line up before block 1
+            (-3.2, 0.65),  # pass below block 1
+            (-1.35, 0.65), # move between blocks 1 and 2
+            (-1.35, 2.75), # pass to the left of block 2, then above it
+            (1.35, 2.75),  # cross above block 2
+            (1.35, 0.65),  # pass to the right of block 2, then below block 3
+            (3.2, 0.65),   # pass below block 3
+            (3.2, 1.70),   # return to the east-side campus path
+            (3.8, 1.70),   # red finish pad
+        ]
+        self.odom_origin = None
+        self.waypoints = []
         self.goal_index = 0
         self.pose = None
         self.yaw = 0.0
@@ -36,11 +53,15 @@ class CampusAutonomy(Node):
         self.odom_time = 0.0
         self.avoid_until = 0.0
         self.avoid_turn = 0.65
+        self.avoid_action = 'turn_left'
         self.completed = False
+        self.failed = False
+        self.route_started = time.monotonic()
+        self.max_route_seconds = 180.0
         self.mode = 'auto'
         self.create_subscription(String, '/campus_navigation/mode', self.mode_cb, 10)
         self.timer = self.create_timer(0.1, self.step)
-        self.get_logger().info(f'Waypoint navigation started: {len(self.waypoints)} campus goals')
+        self.get_logger().info('Waiting for odometry at the green start pad before navigation')
 
     def mode_cb(self, msg):
         requested = msg.data.strip().lower()
@@ -53,19 +74,46 @@ class CampusAutonomy(Node):
     def scan_cb(self, msg):
         self.scan = msg
         self.scan_time = time.monotonic()
+        valid_ranges = [
+            value for value in msg.ranges
+            if math.isfinite(value)
+            and max(msg.range_min, self.self_echo_max_range) < value <= msg.range_max
+        ]
+        if valid_ranges and min(valid_ranges) < 1.8 and not self.obstacle_seen:
+            self.obstacle_seen = True
+            self.get_logger().info(f'LiDAR detected a nearby obstacle at {min(valid_ranges):.2f} m')
+        self.obstacle_pub.publish(Bool(data=self.obstacle_seen))
 
     def odom_cb(self, msg):
         p = msg.pose.pose.position
         q = msg.pose.pose.orientation
-        self.pose = (p.x, p.y)
+        if self.odom_origin is None:
+            self.odom_origin = (p.x, p.y)
+            self.waypoints = [
+                (x - (-3.8), y - 1.70)
+                for x, y in self.route_world
+            ]
+            self.get_logger().info(
+                f'Route origin captured at spawn odometry ({p.x:.2f}, {p.y:.2f}); '
+                'green start pad is the route origin'
+            )
+        self.pose = (p.x - self.odom_origin[0], p.y - self.odom_origin[1])
         self.yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
         self.odom_time = time.monotonic()
 
-    def sector_min(self, start, end):
+    def sector_min_angle(self, low, high):
         if self.scan is None:
             return 0.0
-        vals = [v for v in self.scan.ranges[start:end] if math.isfinite(v) and self.scan.range_min <= v <= self.scan.range_max]
-        return min(vals) if vals else self.scan.range_max
+        values = []
+        for index, value in enumerate(self.scan.ranges):
+            angle = self.scan.angle_min + index * self.scan.angle_increment
+            if (
+                low <= angle <= high
+                and math.isfinite(value)
+                and max(self.scan.range_min, self.self_echo_max_range) < value <= self.scan.range_max
+            ):
+                values.append(value)
+        return min(values) if values else self.scan.range_max
 
     def publish(self, linear=0.0, angular=0.0):
         msg = Twist()
@@ -77,6 +125,16 @@ class CampusAutonomy(Node):
         if self.mode == 'manual':
             return
         now = time.monotonic()
+        if self.failed:
+            self.publish()
+            return
+        if now - self.route_started > self.max_route_seconds:
+            self.failed = True
+            self.publish()
+            message = f'Route timed out at waypoint {self.goal_index + 1}/{len(self.waypoints)}'
+            self.status_pub.publish(String(data=message))
+            self.get_logger().error(message)
+            return
         if self.completed:
             self.publish()
             return
@@ -94,15 +152,16 @@ class CampusAutonomy(Node):
         gx, gy = self.waypoints[self.goal_index]
         dx, dy = gx - self.pose[0], gy - self.pose[1]
         distance = math.hypot(dx, dy)
-        if distance < 0.35:
+        # Stay close to the painted roadmap at each corner before switching goals.
+        if distance < 0.12:
             self.get_logger().info(f'Reached waypoint {self.goal_index + 1}/{len(self.waypoints)}')
             self.goal_index += 1
             self.publish()
             return
 
-        front = self.sector_min(150, 210)
-        left = self.sector_min(210, 300)
-        right = self.sector_min(60, 150)
+        front = self.sector_min_angle(-math.pi / 6.0, math.pi / 6.0)
+        left = self.sector_min_angle(math.pi / 6.0, 2.0 * math.pi / 3.0)
+        right = self.sector_min_angle(-2.0 * math.pi / 3.0, -math.pi / 6.0)
         target_yaw = math.atan2(dy, dx)
         error = angle_error(target_yaw, self.yaw)
 
@@ -112,14 +171,28 @@ class CampusAutonomy(Node):
             self.avoid_until = 0.0
             self.publish(0.0, clamp(1.5 * error, -0.8, 0.8))
         else:
-            if front < 1.0 and now >= self.avoid_until:
-                self.avoid_turn = 0.65 if left >= right else -0.65
-                self.avoid_until = now + (0.8 if front < 0.5 else 1.1)
-                self.get_logger().info(f'Obstacle at {front:.2f} m; turning to clear it')
+            if front < 0.65 and now >= self.avoid_until:
+                if left >= right and left >= 0.35:
+                    action = 'turn_left'
+                elif right >= 0.35:
+                    action = 'turn_right'
+                else:
+                    action = 'stop'
+
+                self.avoid_turn = 0.65 if action == 'turn_left' else -0.65
+                self.avoid_action = action
+                self.avoid_until = now + (0.45 if action == 'stop' else (0.80 if front < 0.5 else 1.0))
+                self.get_logger().info(
+                    f'LiDAR obstacle at {front:.2f} m; clearance rule: {action}; '
+                    f'left={left:.2f} m, right={right:.2f} m'
+                )
             if now < self.avoid_until:
-                # Creep around obstacles, but stop forward motion at close range.
-                self.publish(0.08 if front >= 0.60 else 0.0, self.avoid_turn)
-            elif front < 0.60:
+                if self.avoid_action == 'stop':
+                    self.publish()
+                else:
+                    # Creep only when front clearance is adequate; turn in place if close.
+                    self.publish(0.08 if front >= 0.40 else 0.0, self.avoid_turn)
+            elif front < 0.40:
                 self.publish(0.0, self.avoid_turn)
             else:
                 angular = clamp(1.4 * error, -0.7, 0.7)

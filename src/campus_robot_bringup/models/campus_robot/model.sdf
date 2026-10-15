@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
   <model name="campus_robot">
-    <pose>0 0 0.15 0 0 0</pose>
+    <!-- Spawn height is supplied by campus_sim.launch.py; keep model-local pose at zero. -->
+    <pose>0 0 0 0 0 0</pose>
     <static>false</static>
 
     <link name="base_link">
@@ -103,17 +104,20 @@
     <joint name="left_wheel_joint" type="revolute">
       <parent>base_link</parent>
       <child>left_wheel</child>
-      <axis><xyz>0 0 1</xyz></axis>
+      <!-- Positive DiffDrive wheel speed must roll the robot toward model +X. -->
+      <axis><xyz expressed_in="__model__">0 1 0</xyz></axis>
     </joint>
 
     <joint name="right_wheel_joint" type="revolute">
       <parent>base_link</parent>
       <child>right_wheel</child>
-      <axis><xyz>0 0 1</xyz></axis>
+      <!-- Match the left wheel axis so positive commands drive forward. -->
+      <axis><xyz expressed_in="__model__">0 1 0</xyz></axis>
     </joint>
 
     <link name="lidar_link">
-      <pose>0 0 0.12 0 0 0</pose>
+      <!-- Keep the scan plane above the car cabin so the LiDAR cannot hit its own shell. -->
+      <pose>0 0 0.32 0 0 0</pose>
       <sensor name="lidar" type="gpu_lidar">
         <topic>/scan</topic>
         <update_rate>10</update_rate>

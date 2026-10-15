@@ -1,145 +1,130 @@
-# Campus Drive AI — Project Report
+# Campus Drive AI Robotics Simulation Project Report
 
-**Project type:** ROS 2 mobile robotics simulation  
-**Platform:** Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic / Gazebo Sim 8  
-**Student:** [Add your name]  
-**Department / college:** [Add your department and college]  
-**Date:** [Add submission date]
+**Student:** Abhijit Dash<br>
+**Programme:** B.Tech Computer Science and Engineering, 4th Year<br>
+**Institution:** Centurion University, Bhubaneswar<br>
+**Platform:** Ubuntu 24.04, ROS 2 Jazzy, Gazebo Harmonic (Gazebo Sim 8)<br>
+**Project type:** Rule-based campus mobile robot simulation
 
 ## Abstract
 
-Campus Drive AI is a simulated differential-drive robot that navigates a small campus courtyard. The robot receives 2D LiDAR scans and wheel odometry, follows a sequence of campus waypoints, and uses a reactive obstacle-avoidance rule to change its motion when an obstacle is detected ahead. A separate evaluation node records route duration, odometry-based path length, LiDAR clearance, scan counts, stop commands, and route completion in a CSV file.
+Campus Drive AI is a simulated differential-drive robot that drives through a campus courtyard in Gazebo. A ROS 2 Jazzy controller uses wheel odometry and a planar LiDAR scan to follow nine fixed targets along an S-shaped roadmap. Three static blocks sit across the route; the waypoint path passes below the first block, above the middle block, and below the third. A local LiDAR clearance rule can turn the robot when the forward sector is close to an obstacle. An evaluator records route and sensor measurements in a CSV file, and a status sign changes from simulation started to route finished when the controller signals success.
 
-The project demonstrates the main ROS 2 robotics workflow: simulation, sensor data, velocity commands, navigation logic, and measurable evaluation. The current controller is a beginner-level waypoint and reactive-avoidance implementation. It is not a learned AI model or the full Nav2 stack.
+The latest saved successful run completed with a 13.058 m odometry path in 137.96 seconds and logged 1,117 LiDAR scans. This is one recorded simulation result, not a repeated-trial average. Minimum raw range values may contain robot self-echoes and should not be presented as verified collision clearance.
 
-## Problem statement
+## 1. Introduction and problem statement
 
-A mobile robot in a campus-like environment must move between destinations while using its sensors to respond to nearby obstacles. The project provides a repeatable simulation in which the robot's sensor topics, movement commands, route progress, and evaluation metrics can be inspected.
+Campus delivery and guide robots must move between destinations while sensing nearby objects. Simulation gives students a repeatable way to observe the relationship between sensors, control commands, and robot motion before any physical test. This project builds a small campus-like 3D courtyard and demonstrates waypoint following, reactive obstacle response, ROS 2 topic communication, and basic run evaluation.
 
-## Objectives
+The project addresses a limited prototype problem: can a simulated robot start at a marked point, follow a known route around three fixed blocks, and report completion while publishing sensor data? It does not attempt to solve general campus navigation or guarantee safe motion for arbitrary obstacles.
 
-1. Create a campus courtyard world in Gazebo.
-2. Simulate a differential-drive robot with a 360-degree LiDAR and odometry.
-3. Connect Gazebo sensor and control messages to ROS 2 topics.
-4. Navigate a set of campus waypoints with a simple reactive obstacle-avoidance layer.
-5. Record route performance in a CSV report.
+## 2. Objectives
 
-## System architecture
+1. Create a recognizable campus courtyard in Gazebo Harmonic.
+2. Model a differential-drive robot with a vehicle-style body, 2D LiDAR, and odometry.
+3. Bridge the simulator's sensor and control messages to ROS 2 topics.
+4. Drive from the green start pad to the red finish pad using a nine-target S-shaped route around three fixed blocks.
+5. Add a reactive LiDAR rule and a visible start/finish status sign.
+6. Save measurable results from a successful run and present them in three grouped, labeled graphs.
+
+## 3. Technologies and architecture
+
+Ubuntu 24.04 hosts ROS 2 Jazzy and Gazebo Harmonic. The world and robot are described in SDF. Python 3 with `rclpy` implements the waypoint controller, evaluation recorder, status display, and optional keyboard teleoperation. `ros_gz_bridge` connects Gazebo and ROS 2. `colcon` builds the packages using `ament_cmake`.
+
+The launch file starts Gazebo, a ROS domain and Gazebo partition dedicated to the run, the bridge, robot spawning, autonomy, status display, and evaluation. `/scan` and `/odom` flow from Gazebo into ROS 2. The controller publishes `/cmd_vel`, which the bridge sends to the Gazebo differential-drive system. The evaluator observes sensor and command topics and writes `results/campus_evaluation.csv` after route success or when the node shuts down; an incomplete run is marked false.
 
 ```mermaid
 flowchart LR
-    W[Campus world in Gazebo] --> R[Diff-drive robot]
-    R --> L[LiDAR /scan]
-    R --> O[Odometry /odom]
-    L --> A[Waypoint and obstacle controller]
-    O --> A
-    A --> C[/cmd_vel]
-    C --> R
-    L --> E[Evaluation recorder]
-    O --> E
-    C --> E
-    A --> S[/campus_navigation/status and succeeded]
-    E --> F[results/campus_evaluation.csv]
+  W[Campus world and robot in Gazebo] --> L[/scan LiDAR/]
+  W --> O[/odom wheel odometry/]
+  L --> A[Waypoint and clearance controller]
+  O --> A
+  A --> C[/cmd_vel/]
+  C --> W
+  A --> S[Status and route-success topics]
+  L --> E[Evaluation recorder]
+  O --> E
+  C --> E
+  S --> E
+  E --> F[CSV metrics and graph images]
 ```
 
-### Main software components
+## 4. Environment and route
 
-- **`campus_robot_description`**: robot description package.
-- **`campus_robot_bringup`**: Gazebo world, robot model, launch file, navigation node, and evaluator.
-- **Gazebo Sim**: physics and sensor simulation.
-- **ROS-Gazebo bridge**: connects `/scan`, `/odom`, and `/cmd_vel` between Gazebo and ROS 2.
+The world contains campus buildings, a front-facing `CENTURION UNIVERSITY` sign, paths, lawn areas, trees, planters, green/red markers, and three fixed box obstacles. The blocks are centered at (-2.5, 1.7), (0, 1.7), and (2.5, 1.7) meters. The vehicle-style robot spawns at **(-3.8, 1.7)** at the green start marker. Its destination is the red marker at **(3.8, 1.7)**, 7.6 m away in a straight line.
 
-## Robot and environment
+The yellow roadmap is an S-shaped slalom. The controller visits these world-frame targets in sequence:
 
-The purple east-side campus building is labeled **CENTURION UNIVERSITY** on its courtyard-facing front wall.
+| Order | Target (x, y), meters | Route purpose |
+| ---: | --- | --- |
+| 1 | (-3.2, 1.70) | Line up with the route before block 1 |
+| 2 | (-3.2, 0.65) | Pass below block 1 |
+| 3 | (-1.35, 0.65) | Travel between blocks 1 and 2 |
+| 4 | (-1.35, 2.75) | Turn around the left side of block 2 |
+| 5 | (1.35, 2.75) | Pass above block 2 |
+| 6 | (1.35, 0.65) | Turn down on the right side of block 2 |
+| 7 | (3.2, 0.65) | Pass below block 3 |
+| 8 | (3.2, 1.70) | Rejoin the east-side path |
+| 9 | (3.8, 1.70) | Reach the red finish pad |
 
-The simulated robot is a two-wheel differential-drive base. Its model includes a planar LiDAR and a Gazebo DiffDrive system. The campus world contains paved pedestrian paths, lawn verges, four buildings with facade details, four trees, and two courtyard planters. The trees sit outside the seven-waypoint path. The current waypoint list is defined in `src/campus_robot_bringup/scripts/campus_autonomy.py` and routes through the upper courtyard. The robot starts at world coordinates **(0, 0)** and returns to **(0, 0)** after waypoint 7. The Gazebo world places a green start marker and red finish marker on either side of this shared point; they are visual-only and named in the Entity Tree.
+The first target is distinct from the spawn pose. The final target is distinct from the green start. The controller captures the first odometry pose and expresses targets relative to that origin, so global world coordinates are converted to the local frame used by `/odom`.
 
-## Navigation method
+## 5. Navigation and obstacle response
 
-The controller stores a sequence of seven 2D waypoint coordinates. At each control step it:
+At each control step, the autonomy node computes distance and heading to the active target. If the heading error is large, it rotates in place to face the target. Otherwise it drives forward while correcting heading. A waypoint is considered reached within 0.12 m. The controller processes nine targets and has a 180-second timeout watchdog.
 
-1. Reads the robot position from `/odom` and LiDAR ranges from `/scan`.
-2. Computes the distance and heading error to the current waypoint.
-3. Rotates toward the waypoint before moving forward.
-4. Checks the forward LiDAR sector. If an obstacle is close, it chooses a turn direction based on side-sector clearance and slows or stops forward motion.
-5. Marks a waypoint reached when the robot is within the configured distance threshold, then proceeds to the next goal.
-6. Publishes route progress on `/campus_navigation/status` and publishes success on `/campus_navigation/succeeded` when all goals are reached.
+The local obstacle rule evaluates a forward LiDAR sector and side sectors. If the forward distance falls below 0.65 m, the controller selects the side with greater available clearance and turns; when neither side has enough clearance, it stops. The controller ignores readings shorter than 0.40 m to reduce self-echo effects from the robot's body. This rule complements the known S-shaped roadmap; it is not a global planner and is not guaranteed to generate a safe route in an unknown or dynamic environment.
 
-This is a small reactive controller intended for learning and demonstration. It does not build a map, localize using SLAM, or use Nav2's global and local planners.
+The in-world status display spawns a `SIMULATION STARTED` sign once Gazebo's create service is ready. When `/campus_navigation/succeeded` becomes true, it removes the initial sign and displays `ROUTE FINISHED`. Gazebo's pause/play and camera controls make the scene interactive. The optional teleoperation node can request manual mode; W/I forward, S/K reverse, A/J left, D/L right, Space stop, and Q requests auto mode.
 
-## Interactive controls
-The robot uses a blue vehicle-style body shell. A large visual sign in the Gazebo courtyard changes from **STARTED** to **FINISHED** when the route success signal arrives. The ROS-Gazebo bridge provides the create and remove services used to change the sign.
+## 6. ROS topics
 
-
-The launch opens Gazebo with its graphical client. The user can pause or resume the simulation and manipulate the camera or select entities. Autonomous waypoint following starts by default. For keyboard teleoperation, run `ros2 run campus_robot_bringup campus_teleop.py` in a second sourced terminal. W/S move forward/reverse, A/D turn, Space stops, and Q requests autonomous mode again. The autonomy node listens to `/campus_navigation/mode` so both controllers do not command the robot at the same time.
-
-## ROS topics
-
-| Topic | Message type | Use |
+| Topic | Message type | Description |
 | --- | --- | --- |
-| `/scan` | `sensor_msgs/msg/LaserScan` | LiDAR ranges for obstacle detection |
+| `/scan` | `sensor_msgs/msg/LaserScan` | Simulated 360-degree LiDAR ranges |
 | `/odom` | `nav_msgs/msg/Odometry` | Robot pose and velocity estimate |
-| `/cmd_vel` | `geometry_msgs/msg/Twist` | Linear and angular velocity commands |
-| `/campus_navigation/status` | `std_msgs/msg/String` | Current waypoint and remaining distance |
-| `/campus_navigation/succeeded` | `std_msgs/msg/Bool` | Route completion signal |
-| `/campus_navigation/mode` | `std_msgs/msg/String` | Select `auto` or `manual` control |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` | Requested linear and angular velocity |
+| `/campus_navigation/status` | `std_msgs/msg/String` | Active target index and distance or completion text |
+| `/campus_navigation/obstacle_detected` | `std_msgs/msg/Bool` | Latches true after a valid return under 1.8 m |
+| `/campus_navigation/succeeded` | `std_msgs/msg/Bool` | True when all route targets are reached |
+| `/campus_navigation/mode` | `std_msgs/msg/String` | Auto/manual control selection |
 
-## Evaluation method
+## 7. Demonstration procedure
 
-The evaluation node subscribes to odometry, LiDAR, velocity commands, and route success. It writes `results/campus_evaluation.csv` with elapsed time, accumulated odometry path length, minimum LiDAR return overall and in the forward 60-degree field, scan count, near-obstacle scan count, stop-command count, and route success.
+1. Start from Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic available.
+2. In one terminal run: `cd ~/Desktop/campus_ws && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install && source install/setup.bash && ros2 launch campus_robot_bringup campus_sim.launch.py`.
+3. Keep the launch terminal open. Note the `ROS_DOMAIN_ID` printed near startup.
+4. In Gazebo, point the camera toward the courtyard route. Show the green start pad, three blocks, yellow S-shaped route, red finish pad, car-style robot, and university sign.
+5. In a second terminal, replace `123` below with the `ROS_DOMAIN_ID` printed by the launch terminal, then inspect a topic:
 
-### Verified simulation run
+   `source /opt/ros/jazzy/setup.bash && source ~/Desktop/campus_ws/install/setup.bash && export ROS_DOMAIN_ID=123 && ros2 topic echo --once /campus_navigation/status`
+6. Let autonomous mode run. Explain that the robot uses odometry to follow the known waypoints and LiDAR to react to a close object.
+7. Confirm the route completion message, `ROUTE FINISHED` sign, and successful evaluation CSV.
+8. Press Ctrl+C once in the launch terminal after the demonstration.
 
-The latest completed seven-waypoint run recorded:
+Avoid starting a second Gazebo server or GUI in the same run. Each launch uses a dedicated transport partition and ROS domain; inspection terminals must use the domain printed by that launch.
 
-| Metric | Result |
+## 8. Evaluation method and recorded result
+
+The evaluator accumulates path length from successive odometry positions. It tracks elapsed time, minimum raw LiDAR distance over all directions, minimum raw distance in a ±30-degree forward field, scan count, scans with a raw return under 1 m, zero-velocity command samples, and whether it received route success. The latest saved successful CSV records:
+
+| Metric | Recorded value |
 | --- | ---: |
-| Route completion | Success (7/7 waypoints) |
-| Elapsed time | 277.30 s |
-| Odometry path length | 18.883 m |
-| Minimum LiDAR return | 0.736 m |
-| Minimum forward LiDAR return | 0.736 m |
-| LiDAR scans | 2,772 |
-| Stop commands | 10 |
+| Route success | True |
+| Elapsed time | 137.96 s |
+| Odometry path length | 13.058 m |
+| Minimum raw LiDAR return, any direction | 0.260 m |
+| Minimum raw forward return, ±30 degrees | 0.581 m |
+| LiDAR scan count | 1,117 |
+| Scans with a raw return under 1 m | 1,022 |
+| Zero-velocity command samples | 10 |
 
-These values describe one simulation run. Results can vary with changes to the controller, world, or simulation performance. The verified run is preserved as `results/campus_evaluation_verified.csv`. The standard `results/campus_evaluation.csv` is overwritten on each run and may reflect a later interrupted attempt.
+The three charts in `graphs/` group route performance, LiDAR ranges, and sensor/controller activity. They plot every available record from `campus_evaluation.csv` and `campus_evaluation_verified.csv`, with source labels. The current evaluator CSV contains one run; the separate verified CSV supplies the second plotted record. Minimum raw ranges may include self-echoes because the evaluator records raw sensor values; they are not verified collision clearances. A count of scans under 1 m is not a count of distinct obstacles. Route success confirms the controller reached its last waypoint, not that all safety properties were independently certified.
 
-## How to run
+## 9. Limitations and future work
 
-From a terminal:
+The project follows fixed world-frame targets and uses local LiDAR thresholds. It does not include SLAM, map-based localization, Nav2, global path planning, learned machine learning, moving-obstacle tracking, repeated-trial statistics, or real-robot safety validation. Future work can add contact/collision instrumentation and repeatable trials first, then integrate mapping/localization and Nav2 if broader autonomous navigation is required.
 
-```bash
-cd ~/Desktop/campus_ws && source /opt/ros/jazzy/setup.bash && source install/setup.bash && ros2 launch campus_robot_bringup campus_sim.launch.py
-```
+## Conclusion
 
-The launch runs the simulation server headlessly. Wait for `Campus route complete` to appear. Press Ctrl+C once to stop it. The CSV is written to `results/campus_evaluation.csv`.
-
-To check route progress from a second terminal:
-
-```bash
-source /opt/ros/jazzy/setup.bash && source ~/Desktop/campus_ws/install/setup.bash && ros2 topic echo --once /campus_navigation/status
-```
-
-## Limitations and future work
-
-- This implementation uses hand-coded waypoint and reactive-avoidance rules, not machine learning.
-- It is a simulation demonstration, not a safety-certified system for a physical robot.
-- Evaluation is based on simulated odometry and LiDAR; it does not include repeated statistical trials or ground-truth tracking.
-- A logical next upgrade is Nav2 with a mapped environment, localization, a global planner, and a local obstacle-avoidance planner.
-- Further work could add an IMU or camera, more varied obstacle layouts, repeated trials, plots of the CSV metrics, and automated collision or clearance checks.
-
-## Reproducibility notes
-
-Source files are in `src/`. After changing them, rebuild with:
-
-```bash
-cd ~/Desktop/campus_ws && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install && source install/setup.bash
-```
-
-The project README contains the shorter quick-start guide. The evaluation CSV is regenerated on each run, so copy it elsewhere before a new run if you need to keep a previous trial.
-
-
-## Updated map evaluation note
-
-The saved verified CSV, and graphs derived from it, describe the earlier simpler world. Those previous measurements predate the new map scenery and tree obstacles. Re-run the updated world before reporting performance metrics as results for this map.
+The current project provides a working educational simulation loop: a campus world, differential-drive model, LiDAR and odometry, ROS 2 control topics, a nine-target slalom route, a local obstacle response, an interactive status display, and CSV-based evaluation. The latest saved run completed successfully. Further evidence from repeated runs and explicit collision monitoring would be needed before making stronger reliability or clearance claims.

@@ -3,7 +3,7 @@
 <package format="3">
   <name>campus_robot_bringup</name>
   <version>0.2.0</version>
-  <description>Campus Drive AI simulation with waypoint navigation, LiDAR obstacle avoidance, and evaluation for ROS 2 Jazzy and Gazebo Harmonic.</description>
+  <description>Autonomous campus robot simulation with waypoint navigation, LiDAR obstacle avoidance, and evaluation for ROS 2 Jazzy and Gazebo Harmonic.</description>
   <maintainer email="abhijit@todo.todo">abhijit</maintainer>
   <license>BSD-3-Clause</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
