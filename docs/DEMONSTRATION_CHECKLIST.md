@@ -19,7 +19,7 @@ Keep this terminal open and note the printed `ROS_DOMAIN_ID`.
 
 - Show the blue vehicle-style robot at the green start pad **(-3.8, 1.7)**.
 - Show the red destination at **(3.8, 1.7)** and explain the 7.6 m endpoint spacing.
-- Point out all three fixed blocks and follow the yellow S-route: below block 1, above block 2, below block 3.
+- Point out all three fixed blocks and follow the paved road with dashed center markings: below block 1, above block 2, below block 3.
 - Show the `CENTURION UNIVERSITY` sign on the courtyard-facing wall.
 - Explain that the active autonomy implementation is rule-based, not trained AI/ML.
 - Let the route run until the display says **ROUTE FINISHED**.
@@ -43,8 +43,8 @@ Other useful topics are `/scan`, `/odom`, `/cmd_vel`, `/campus_navigation/obstac
 ## Show results and shut down
 
 - Open `results/campus_evaluation.csv` and explain each metric briefly.
-- Show the three summary plots in `graphs/`: route performance, LiDAR ranges, and sensor/controller activity. Explain that each point is one CSV record and identify its run label.
-- State that the latest saved successful run is a single run: 137.96 s, 13.058 m odometry path, 1,117 scans, and route success `True`.
+- Show the five summary plots in `graphs/`: route performance, LiDAR ranges, sensor/controller activity, run time, and distance traveled. Explain that each chart represents individual CSV records, not averages.
+- State that the latest saved successful run is a single run: 146.62 s, 13.056 m odometry path, 1,113 scans, and route success `True`.
 - Explain that minimum raw LiDAR values may include self-echoes and do not certify collision clearance.
 - Press Ctrl+C once in the launch terminal after the demonstration.
 

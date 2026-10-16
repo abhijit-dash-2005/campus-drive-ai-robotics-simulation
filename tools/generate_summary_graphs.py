@@ -172,12 +172,70 @@ def activity_chart(runs):
     save(fig, "03_sensor_controller_activity.png")
 
 
+def simple_bar_chart(runs, key, title, ylabel, filename, value_format, note):
+    """Create one easy-to-read bar per recorded run, with units in each label."""
+    labels = [f"{run['label']}\n{'Completed' if run['success'] else 'Incomplete'}" for run in runs]
+    values = [run[key] for run in runs]
+    colors = ["#4F8A5B" if run["success"] else "#C34E63" for run in runs]
+    x = np.arange(len(runs))
+    fig, ax = plt.subplots(figsize=(max(7.5, 1.8 * len(runs)), 5.2))
+    fig.suptitle(title, fontweight="bold", y=0.97)
+    bars = ax.bar(x, values, color=colors, width=0.62, edgecolor="white", linewidth=1.2)
+    for bar, value in zip(bars, values):
+        ax.annotate(
+            value_format(value),
+            (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+            xytext=(0, 7),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+            color="#24323A",
+        )
+    ax.set_xticks(x, labels)
+    ax.set_ylabel(ylabel)
+    ax.set_ylim(0, max(values) * 1.25 if max(values) else 1)
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y")
+    sources = ", ".join(dict.fromkeys(run["source"] for run in runs))
+    fig.text(0.01, 0.015, f"One bar per CSV record; these are individual runs, not averages. {note} Source: results/{sources}",
+             color="#53636D", fontsize=8)
+    fig.tight_layout(rect=(0, 0.07, 1, 0.91))
+    save(fig, filename)
+
+
+def elapsed_time_bar_chart(runs):
+    simple_bar_chart(
+        runs,
+        "elapsed",
+        "Campus Drive AI — Time to Complete Each Run",
+        "Elapsed time (seconds)",
+        "04_run_time_bar.png",
+        lambda value: f"{value:.1f} s",
+        "Elapsed time can vary with simulator speed.",
+    )
+
+
+def distance_bar_chart(runs):
+    simple_bar_chart(
+        runs,
+        "path",
+        "Campus Drive AI — Distance Traveled in Each Run",
+        "Odometry-estimated distance (meters)",
+        "05_distance_traveled_bar.png",
+        lambda value: f"{value:.2f} m",
+        "Distance is summed from the robot's odometry readings.",
+    )
+
+
 def main():
     runs = load_runs()
     performance_chart(runs)
     lidar_chart(runs)
     activity_chart(runs)
-    print(f"Created 3 charts from {len(runs)} successful/incomplete evaluation records in {OUTPUT}")
+    elapsed_time_bar_chart(runs)
+    distance_bar_chart(runs)
+    print(f"Created 5 charts from {len(runs)} successful/incomplete evaluation records in {OUTPUT}")
     for run in runs:
         print(f"{run['label']} ({run['source']}): success={run['success']}")
 

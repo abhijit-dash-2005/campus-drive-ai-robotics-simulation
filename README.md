@@ -13,7 +13,7 @@ This project currently uses hand-written waypoint and LiDAR rules. It does **not
 - A nine-target S-shaped waypoint route that passes below the first block, above the middle block, and below the third block before reaching the red destination.
 - Reactive obstacle handling based on forward LiDAR distance and side clearance.
 - An in-world `SIMULATION STARTED` sign that changes to `ROUTE FINISHED` after the controller reports success.
-- Optional keyboard teleoperation, ROS topic inspection, and CSV evaluation output summarized by three charts.
+- Optional keyboard teleoperation, ROS topic inspection, and CSV evaluation output summarized by five charts.
 
 ## Software
 
@@ -42,7 +42,7 @@ campus_ws/
 │   │   └── worlds/campus.world
 │   └── campus_robot_description/
 ├── docs/                 # Project report and viva guide
-├── graphs/               # Three summary charts with all available evaluation points
+├── graphs/               # Five summary charts, including two simple bar charts
 ├── tools/                # Summary chart generator
 └── results/               # Evaluation CSV files
 ```
@@ -79,7 +79,7 @@ The route starts at world pose **(-3.8, 1.7)**, first lines up at **(-3.2, 1.7)*
 
 The node captures the spawn odometry as its origin, converts the world targets into that local odometry frame, and advances within a 0.12 m waypoint tolerance. It turns toward the active target and then drives forward. When the forward LiDAR sector is under the configured 0.65 m avoidance threshold, it compares left/right sectors and turns toward the side with more measured clearance. LiDAR returns shorter than 0.40 m are ignored by the controller to reduce robot-body self-echoes. A 180-second watchdog stops a run that does not complete.
 
-The yellow S-shaped route is a fixed roadmap for this world. Local LiDAR handling supplements it; it does not calculate a new global path or guarantee avoidance for arbitrary moving obstacles.
+The paved S-shaped road with dashed center markings follows the fixed roadmap for this world. Local LiDAR handling supplements it; it does not calculate a new global path or guarantee avoidance for arbitrary moving obstacles.
 
 ## ROS topics
 
@@ -126,15 +126,15 @@ The latest saved successful run in the workspace records:
 | Measure | Recorded value |
 | --- | ---: |
 | Route result | Succeeded (`True`) |
-| Elapsed time | 137.96 s |
-| Odometry path length | 13.058 m |
-| Minimum raw LiDAR return, all directions | 0.260 m |
-| Minimum raw forward return, ±30 degrees | 0.581 m |
-| LiDAR scans | 1,117 |
-| Scans with a raw return under 1 m | 1,022 |
+| Elapsed time | 146.62 s |
+| Odometry path length | 13.056 m |
+| Minimum raw LiDAR return, all directions | 0.250 m |
+| Minimum raw forward return, ±30 degrees | 0.537 m |
+| LiDAR scans | 1,113 |
+| Scans with a raw return under 1 m | 1,011 |
 | Zero-velocity command samples | 10 |
 
-The three charts in `graphs/` summarize every available record from `results/campus_evaluation.csv` and `results/campus_evaluation_verified.csv`: route performance, raw LiDAR ranges, and sensor/controller activity. Each point is labeled with its source run. To regenerate them in an environment with Matplotlib, run `python3 tools/generate_summary_graphs.py` from the workspace root. The raw minimum LiDAR values can include returns from the robot's own body. These raw-distance metrics are not verified collision-clearance measurements, and “near-obstacle scans” are scan counts rather than distinct obstacle encounters. Two successful records do not establish repeatability or physical-robot safety.
+The five charts in `graphs/` summarize every available record from `results/campus_evaluation.csv` and `results/campus_evaluation_verified.csv`: route performance, raw LiDAR ranges, sensor/controller activity, elapsed time by run, and odometry-estimated distance by run. The two bar charts display each recorded run separately, with units and completion status; they are not averages. To regenerate them in an environment with Matplotlib, run `python3 tools/generate_summary_graphs.py` from the workspace root. The raw minimum LiDAR values can include returns from the robot's own body. These raw-distance metrics are not verified collision-clearance measurements, and “near-obstacle scans” are scan counts rather than distinct obstacle encounters. Two successful records do not establish repeatability or physical-robot safety.
 
 ## Documentation
 

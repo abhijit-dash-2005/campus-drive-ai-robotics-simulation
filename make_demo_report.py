@@ -205,7 +205,7 @@ for h, para in [
         doc.add_heading('Campus scene and model components', level=2)
         doc.add_paragraph('The environment is built from simple geometric shapes and colors so that the layout is light enough to simulate on a student laptop. Static scenery defines the campus boundaries; the robot and its sensor links remain dynamic.')
         add_table(doc, ['Element', 'Purpose in the scene'], [
-            ('Yellow S-shaped route', 'Guides the robot below block 1, above block 2, and below block 3.'),
+            ('Paved road with dashed center markings', 'Guides the robot below block 1, above block 2, and below block 3.'),
             ('Campus buildings', 'Give the courtyard a recognizable campus setting; the purple building carries the university name.'),
             ('Trees and planters', 'Provide LiDAR-visible objects for nearby obstacle observations.'),
             ('Start and finish markers', 'Mark separate endpoints at (-3.8, 1.7) m and (3.8, 1.7) m.'),
@@ -287,15 +287,15 @@ doc.add_paragraph('During a successful demonstration, Gazebo should show the cam
 doc.add_heading('Evaluation measures', level=2)
 add_table(doc, ['Metric', 'Latest saved successful run'], [
     ('Route result', 'Succeeded (route_succeeded=True)'),
-    ('Elapsed time', '137.96 s'),
-    ('Odometry path length', '13.058 m'),
-    ('Minimum raw LiDAR return', '0.260 m'),
-    ('Minimum raw forward return (±30°)', '0.581 m'),
-    ('LiDAR scans', '1,117'),
-    ('Scans with raw nearest range under 1 m', '1,022'),
+    ('Elapsed time', '146.62 s'),
+    ('Odometry path length', '13.056 m'),
+    ('Minimum raw LiDAR return', '0.250 m'),
+    ('Minimum raw forward return (±30°)', '0.537 m'),
+    ('LiDAR scans', '1,113'),
+    ('Scans with raw nearest range under 1 m', '1,011'),
     ('Zero-velocity command samples', '10')
 ], [2.3, 4.45])
-add_note(doc, 'Latest saved successful run', 'The CSV records route_succeeded=True, 137.96 s elapsed, 13.058 m odometry path, 0.260 m minimum raw LiDAR return, 0.581 m minimum raw forward return, 1,117 scans, 1,022 scans with a raw return under 1 m, and 10 zero-velocity command samples. These are single-run values. Raw minima may include robot self-echoes and are not verified collision-clearance measurements. Three summary graphs in graphs/ show all available result points from the saved and verified evaluation CSV files.')
+add_note(doc, 'Latest saved successful run', 'The CSV records route_succeeded=True, 146.62 s elapsed, 13.056 m odometry path, 0.250 m minimum raw LiDAR return, 0.537 m minimum raw forward return, 1,113 scans, 1,011 scans with a raw return under 1 m, and 10 zero-velocity command samples. These are single-run values. Raw minima may include robot self-echoes and are not verified collision-clearance measurements. Five summary graphs in graphs/ show all available result points from the saved and verified evaluation CSV files.')
 doc.add_heading('What counts as a successful run', level=2)
 add_table(doc, ['Check', 'Evidence to show'], [
     ('World and robot start', 'Gazebo shows the courtyard and the robot spawn.'),
@@ -332,7 +332,7 @@ add_table(doc, ['Stage', 'Next work', 'Benefit'], [
 doc.add_heading('Expected long-term outcome', level=2)
 doc.add_paragraph('With these stages, the project can grow from a single scripted route into a testable campus navigation platform. Each upgrade should be measured against repeatable scenarios, with safety checks and route-completion evidence recorded alongside performance numbers.')
 doc.add_heading('9. Conclusion', level=1)
-doc.add_paragraph('Campus Drive AI brings together a simulated campus, a differential-drive robot, LiDAR and odometry, ROS 2 communication, a nine-target S-shaped route around three fixed blocks, reactive obstacle handling, an in-world completion sign, and automatic performance logging. The latest saved successful run completed in 137.96 seconds with a 13.058 m odometry path. Its raw LiDAR metrics require caution because self-echoes are not excluded by the evaluator. The implementation is a learning prototype that can be extended with repeat trials, collision monitoring, mapping, and more advanced navigation.')
+doc.add_paragraph('Campus Drive AI brings together a simulated campus, a differential-drive robot, LiDAR and odometry, ROS 2 communication, a nine-target S-shaped route around three fixed blocks, reactive obstacle handling, an in-world completion sign, and automatic performance logging. The latest saved successful run completed in 146.62 seconds with a 13.056 m odometry path. Its raw LiDAR metrics require caution because self-echoes are not excluded by the evaluator. The implementation is a learning prototype that can be extended with repeat trials, collision monitoring, mapping, and more advanced navigation.')
 
 # Document metadata and save
 doc.core_properties.title = 'Campus Drive AI Project Demonstration Report'

@@ -46,7 +46,7 @@ The controller reads `/odom`, computes distance and heading to the next target, 
 The node checks the forward LiDAR sector. Below a 0.65 m forward threshold it compares left and right clearances and turns toward the clearer side; if neither side has enough clearance it stops. It ignores returns below 0.40 m to reduce robot-body echoes.
 
 ### 14. Does the robot calculate a new route around any obstacle?
-No. The yellow S-route is programmed for the three fixed blocks in this world. The LiDAR response is local and reactive; it does not provide global planning or a guarantee for arbitrary moving obstacles.
+No. The paved S-shaped road with dashed center markings is programmed for the three fixed blocks in this world. The LiDAR response is local and reactive; it does not provide global planning or a guarantee for arbitrary moving obstacles.
 
 ### 15. Why can a robot move backward in the simulator?
 The autonomous controller publishes nonnegative forward speed, but the optional teleoperation node explicitly supports reverse with S/K. A backward movement can also be caused by differential-drive axis or frame configuration. For the demonstration, use one active launch, confirm the correct spawn pose and route, and avoid manual teleoperation during the autonomous segment.
@@ -63,9 +63,9 @@ The display node spawns a “SIMULATION STARTED” sign when Gazebo is ready, th
 Elapsed time, odometry-based path length, minimum raw LiDAR return overall and in a ±30-degree forward sector, scan count, scans with raw range under 1 m, zero-velocity command samples, and route success.
 
 ### 19. What was the latest saved successful result?
-The latest saved CSV reports success, 137.96 seconds, 13.058 m path length, 1,117 scans, 1,022 scans with a raw return under 1 m, and 10 zero-velocity command samples. The minimum raw ranges were 0.260 m overall and 0.581 m in the forward sector.
+The latest saved CSV reports success, 146.62 seconds, 13.056 m path length, 1,113 scans, 1,011 scans with a raw return under 1 m, and 10 zero-velocity command samples. The minimum raw ranges were 0.250 m overall and 0.537 m in the forward sector.
 
-### 20. Does the 0.260 m reading prove the robot nearly collided?
+### 20. Does the 0.250 m reading prove the robot nearly collided?
 Not by itself. The evaluator records raw LiDAR ranges and may include echoes from the robot's own body. These values are not verified collision-clearance measurements. Collision/contact instrumentation and controlled tests would be needed for a stronger claim.
 
 ### 21. Is this ready to control a real robot?
@@ -77,6 +77,6 @@ Add collision/contact monitoring and run multiple repeatable trials. After estab
 ## Demonstration quick sequence
 
 1. Build and launch from `~/Desktop/campus_ws` using the README command.
-2. Show the campus world, the three blocks, the yellow S-route, green start, red destination, robot, and university sign.
+2. Show the campus world, the three blocks, the paved S-shaped road with dashed center markings, green start, red destination, robot, and university sign.
 3. In a second terminal, use the `ROS_DOMAIN_ID` printed at launch and inspect `/scan`, `/odom`, and `/campus_navigation/status`.
 4. Let the autonomous route finish; show the in-world completion sign and `results/campus_evaluation.csv`.

@@ -10,7 +10,7 @@
 
 Campus Drive AI is a simulated differential-drive robot that drives through a campus courtyard in Gazebo. A ROS 2 Jazzy controller uses wheel odometry and a planar LiDAR scan to follow nine fixed targets along an S-shaped roadmap. Three static blocks sit across the route; the waypoint path passes below the first block, above the middle block, and below the third. A local LiDAR clearance rule can turn the robot when the forward sector is close to an obstacle. An evaluator records route and sensor measurements in a CSV file, and a status sign changes from simulation started to route finished when the controller signals success.
 
-The latest saved successful run completed with a 13.058 m odometry path in 137.96 seconds and logged 1,117 LiDAR scans. This is one recorded simulation result, not a repeated-trial average. Minimum raw range values may contain robot self-echoes and should not be presented as verified collision clearance.
+The latest saved successful run completed with a 13.056 m odometry path in 146.62 seconds and logged 1,113 LiDAR scans. This is one recorded simulation result, not a repeated-trial average. Minimum raw range values may contain robot self-echoes and should not be presented as verified collision clearance.
 
 ## 1. Introduction and problem statement
 
@@ -25,7 +25,7 @@ The project addresses a limited prototype problem: can a simulated robot start a
 3. Bridge the simulator's sensor and control messages to ROS 2 topics.
 4. Drive from the green start pad to the red finish pad using a nine-target S-shaped route around three fixed blocks.
 5. Add a reactive LiDAR rule and a visible start/finish status sign.
-6. Save measurable results from a successful run and present them in three grouped, labeled graphs.
+6. Save measurable results from a successful run and present them in five labeled graphs, including simple bar charts for run time and traveled distance.
 
 ## 3. Technologies and architecture
 
@@ -53,7 +53,7 @@ flowchart LR
 
 The world contains campus buildings, a front-facing `CENTURION UNIVERSITY` sign, paths, lawn areas, trees, planters, green/red markers, and three fixed box obstacles. The blocks are centered at (-2.5, 1.7), (0, 1.7), and (2.5, 1.7) meters. The vehicle-style robot spawns at **(-3.8, 1.7)** at the green start marker. Its destination is the red marker at **(3.8, 1.7)**, 7.6 m away in a straight line.
 
-The yellow roadmap is an S-shaped slalom. The controller visits these world-frame targets in sequence:
+The paved road with dashed center markings follows the S-shaped roadmap. The controller visits these world-frame targets in sequence:
 
 | Order | Target (x, y), meters | Route purpose |
 | ---: | --- | --- |
@@ -94,7 +94,7 @@ The in-world status display spawns a `SIMULATION STARTED` sign once Gazebo's cre
 1. Start from Ubuntu 24.04 with ROS 2 Jazzy and Gazebo Harmonic available.
 2. In one terminal run: `cd ~/Desktop/campus_ws && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install && source install/setup.bash && ros2 launch campus_robot_bringup campus_sim.launch.py`.
 3. Keep the launch terminal open. Note the `ROS_DOMAIN_ID` printed near startup.
-4. In Gazebo, point the camera toward the courtyard route. Show the green start pad, three blocks, yellow S-shaped route, red finish pad, car-style robot, and university sign.
+4. In Gazebo, point the camera toward the courtyard route. Show the green start pad, three blocks, paved S-shaped road with dashed center markings, red finish pad, car-style robot, and university sign.
 5. In a second terminal, replace `123` below with the `ROS_DOMAIN_ID` printed by the launch terminal, then inspect a topic:
 
    `source /opt/ros/jazzy/setup.bash && source ~/Desktop/campus_ws/install/setup.bash && export ROS_DOMAIN_ID=123 && ros2 topic echo --once /campus_navigation/status`
@@ -111,15 +111,15 @@ The evaluator accumulates path length from successive odometry positions. It tra
 | Metric | Recorded value |
 | --- | ---: |
 | Route success | True |
-| Elapsed time | 137.96 s |
-| Odometry path length | 13.058 m |
-| Minimum raw LiDAR return, any direction | 0.260 m |
-| Minimum raw forward return, ±30 degrees | 0.581 m |
-| LiDAR scan count | 1,117 |
-| Scans with a raw return under 1 m | 1,022 |
+| Elapsed time | 146.62 s |
+| Odometry path length | 13.056 m |
+| Minimum raw LiDAR return, any direction | 0.250 m |
+| Minimum raw forward return, ±30 degrees | 0.537 m |
+| LiDAR scan count | 1,113 |
+| Scans with a raw return under 1 m | 1,011 |
 | Zero-velocity command samples | 10 |
 
-The three charts in `graphs/` group route performance, LiDAR ranges, and sensor/controller activity. They plot every available record from `campus_evaluation.csv` and `campus_evaluation_verified.csv`, with source labels. The current evaluator CSV contains one run; the separate verified CSV supplies the second plotted record. Minimum raw ranges may include self-echoes because the evaluator records raw sensor values; they are not verified collision clearances. A count of scans under 1 m is not a count of distinct obstacles. Route success confirms the controller reached its last waypoint, not that all safety properties were independently certified.
+The five charts in `graphs/` show route performance, LiDAR ranges, sensor/controller activity, elapsed time by run, and odometry-estimated distance by run. They plot every available record from `campus_evaluation.csv` and `campus_evaluation_verified.csv`, with source labels. The bar charts present each run separately; they are not averages. Minimum raw ranges may include self-echoes because the evaluator records raw sensor values; they are not verified collision clearances. A count of scans under 1 m is not a count of distinct obstacles. Route success confirms the controller reached its last waypoint, not that all safety properties were independently certified.
 
 ## 9. Limitations and future work
 
